@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>도별 기상청 초단기 실황 정보</title>
+</head>
+<body>
+    <h1>도별 기상청 초단기 실황 정보</h1>
+
+    <label for="region-select">지역 선택:</label>
+    <select id="region-select">
+        <option value="55,127">서울특별시</option>
+        <option value="60,120">인천광역시</option>
+        <option value="60,127">경기도</option>
+        <option value="98,76">부산광역시</option>
+        <option value="89,91">대구광역시</option>
+        <option value="73,134">강원도</option>
+        <option value="102,84">경상남도</option>
+        <option value="66,103">충청북도</option>
+        <!-- 필요에 따라 추가 -->
+    </select>
+
+    <div id="weather-info">
+        <!-- 날씨 정보가 여기에 표시됩니다. -->
+    </div>
+
+    <script>
+        const urlBase = 'http://localhost:3000/weather';
+
+        async function fetchWeatherData(nx, ny) {
+            try {
+                const response = await fetch(`${urlBase}?nx=${nx}&ny=${ny}`);
+                const textData = await response.text();
+
+                // XML 파싱
+                const parser = new DOMParser();
+                const xmlDoc = parser.parseFromString(textData, "application/xml");
+
+                // 기온(T1H) 및 강수량(RN1) 데이터 추출
+                let temperature = "데이터 없음";
+                let precipitation = "데이터 없음";
+
+                const items = xmlDoc.querySelectorAll("item");
+
+                items.forEach(item => {
+                    const category = item.querySelector("category").textContent;
+                    const value = item.querySelector("obsrValue").textContent;
+
+                    if (category === "T1H") {
+                        temperature = value;
+                    } else if (category === "RN1") {
+                        precipitation = value;
+                    }
+                });
+
+                // 데이터를 HTML에 표시
+                const weatherInfo = document.getElementById('weather-info');
+                weatherInfo.innerHTML = `
+                    <p>기온: ${temperature}℃</p>
+                    <p>강수량: ${precipitation}mm</p>
+                `;
+            } catch (error) {
+                console.error('Error fetching or parsing weather data:', error);
+                document.getElementById('weather-info').innerText = '데이터를 불러오는 중 오류가 발생했습니다.';
+            }
+        }
+
+        // 지역 선택 시 데이터 요청
+        document.getElementById('region-select').addEventListener('change', (event) => {
+            const [nx, ny] = event.target.value.split(',');
+            fetchWeatherData(nx, ny);
+        });
+
+        // 페이지 로드 시 기본 지역 데이터 요청
+        const defaultRegion = document.getElementById('region-select').value.split(',');
+        fetchWeatherData(defaultRegion[0], defaultRegion[1]);
+    </script>
+</body>
+</html>
